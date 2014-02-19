@@ -21,6 +21,9 @@
 ;     :password "password")
 (def test-host (or (System/getenv "clutch_url") "http://localhost:5984"))
 
+;;Make sure that the "out" directory exists (otherwise, constants_table.js is not generated)
+(.mkdir (java.io.File. "out"))
+
 (println "Testing using Clojure" *clojure-version*
          "on Java" (System/getProperty "java.version")
          "=>>" (-> test-host url (assoc :username nil :password nil) str))
