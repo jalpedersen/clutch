@@ -21,9 +21,9 @@
   :once
   #(binding [*clj-view-svr-config* (try
                                      (when (re-find #"localhost" test-host)
-                                       (configure-view-server (utils/url test-host)
-                                                              (view-server/view-server-exec-string)
-                                                              :language view-server-name))
+                                       (configure-view-server-with-db (utils/url test-host)
+                                                                      (view-server/view-server-exec-string)
+                                                                      :language view-server-name))
                                      (catch java.io.IOException e (.printStackTrace e)))]
      (when-not *clj-view-svr-config*
        (println "Could not autoconfigure clutch view server,"

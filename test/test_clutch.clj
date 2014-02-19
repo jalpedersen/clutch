@@ -27,7 +27,7 @@
 (println "Testing using Clojure" *clojure-version*
          "on Java" (System/getProperty "java.version")
          "=>>" (-> test-host url (assoc :username nil :password nil) str))
-(println "CouchDB server info:" (couchdb-info (-> test-host url str)))
+(println "CouchDB server info:" (couchdb-info-with-db (-> test-host url str)))
 
 (def resources-path "test")
 
@@ -58,37 +58,37 @@
 
 (defmacro defdbtest [name & body]
   `(deftest ~name
-     (binding [*test-database* (get-database (test-database-url (test-database-name ~name)))]
+     (binding [*test-database* (get-database-with-db (test-database-url (test-database-name ~name)))]
        (try
         (with-db *test-database* ~@body)
         (finally
-          (delete-database *test-database*))))))
+          (delete-database-with-db *test-database*))))))
 
 (deftest check-couchdb-connection
-  (is (= "Welcome" (:couchdb (couchdb-info (test-database-url nil))))))
+  (is (= "Welcome" (:couchdb (couchdb-info-with-db (test-database-url nil))))))
 
 (deftest get-list-check-and-delete-database
   (let [name "clutch_test_db"
         url (test-database-url name)
-        *test-database* (get-database url)]
+        *test-database* (get-database-with-db url)]
     (is (= name (:db_name *test-database*)))
-    (is ((set (all-databases url)) name))
-    (is (= name (:db_name (database-info url))))
-    (is (:ok (delete-database url)))
-    (is (nil? ((set (all-databases url)) name)))))
+    (is ((set (all-databases-with-db url)) name))
+    (is (= name (:db_name (database-info-with-db url))))
+    (is (:ok (delete-database-with-db url)))
+    (is (nil? ((set (all-databases-with-db url)) name)))))
  
 (deftest database-name-escaping
   (let [name (test-database-name "foo_$()+-/bar")
         url (test-database-url name)]
     (try
-      (let [dbinfo (get-database url)]
+      (let [dbinfo (get-database-with-db url)]
         (is (= name (:db_name dbinfo))))
-      (put-document url {:_id "a" :b 0})
-      (is (= 0 (:b (get-document url "a"))))
-      (delete-document url (get-document url "a"))
-      (is (nil? (get-document url "a")))
+      (put-document-with-db url {:_id "a" :b 0})
+      (is (= 0 (:b (get-document-with-db url "a"))))
+      (delete-document-with-db url (get-document-with-db url "a"))
+      (is (nil? (get-document-with-db url "a")))
       (finally
-        (delete-database url)))))
+        (delete-database-with-db url)))))
 
 (defn- valid-id-charcode?
   [code]
@@ -347,14 +347,14 @@
   (let [source (url test-host "source_test_db")
         target (url test-host "target_test_db")]
     (try
-      (get-database source)
-      (get-database target)
-      (bulk-update source test-docs)
-      (replicate-database source target)
-      (is (= 4 (:total_rows (meta (all-documents target)))))
+      (get-database-with-db source)
+      (get-database-with-db target)
+      (bulk-update-with-db source test-docs)
+      (replicate-database-with-db source target)
+      (is (= 4 (:total_rows (meta (all-documents-with-db target)))))
       (finally
-        (delete-database source)
-        (delete-database target)))))
+        (delete-database-with-db source)
+        (delete-database-with-db target)))))
 
 (defn report-change
   [description & forms]
@@ -383,12 +383,12 @@
 (deftest direct-db-config-usage
   (let [db (test-database-url "direct-db-config-usage")]
     (try
-      (create-database db)
-      (let [doc (put-document db (first test-docs) :id "foo")]
-        (update-document db doc {:a 5})
-        (is (= (assoc (first test-docs) :a 5) (dissoc-meta (get-document db "foo")))))
+      (create-database-with-db db)
+      (let [doc (put-document-with-db db (first test-docs) :id "foo")]
+        (update-document-with-db db doc {:a 5})
+        (is (= (assoc (first test-docs) :a 5) (dissoc-meta (get-document-with-db db "foo")))))
       (finally
-        (delete-database db)))))
+        (delete-database-with-db db)))))
 
 (deftest multiple-binding-levels
   (let [db1 (test-database-url "multiple-binding-levels")

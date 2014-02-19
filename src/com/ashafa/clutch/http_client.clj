@@ -11,7 +11,7 @@
             (java.net URL URLConnection HttpURLConnection MalformedURLException)))
 
 
-(def ^{:private true} version "0.3.0")
+(def ^{:private true} version "0.5.0")
 (def ^{:private true} user-agent (str "com.ashafa.clutch/" version))
 (def ^{:dynamic true} *default-data-type* "application/json")
 (def ^{:dynamic true} *configuration-defaults* {:socket-timeout 0

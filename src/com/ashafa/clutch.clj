@@ -22,28 +22,45 @@
 
 (declare couchdb-class)
 
-(defn- with-db*
-  [f]
-  (fn [& [maybe-db & rest :as args]]
-    (let [maybe-db (if (instance? couchdb-class maybe-db)
-                     (.url maybe-db)
-                     maybe-db)]
-      (if (and (thread-bound? #'*database*)
-               (not (identical? maybe-db *database*)))
-      (apply f *database* args)
-      (apply f (utils/url maybe-db) rest)))))
+(defn- url-from-database [db]
+  (if (instance? couchdb-class db)
+    (.url db)
+    db))
 
 (defmacro ^{:private true} defdbop
-  "Same as defn, but wraps the defined function in another that transparently
-   allows for dynamic or explicit application of database configuration as well
-   as implicit coercion of the first `db` argument to a URL instance."
+  "Create two versions of the same function: One accepting a database as first argument, the second taking it from the thread-bound *database*.
+  Given the definition:
+    (defdbop testing [db a1 a2]
+     (...))
+
+  The end result will be:
+    (defn testing [a1 a2]
+      (let [db *database*])
+        (...))
+    (defn testing-with-db [db a1 a2]
+        (...))
+  "
   [name & body]
-  `(do
-     (defn ~name ~@body)
-     (alter-var-root (var ~name) with-db*)
-     (alter-meta! (var ~name) update-in [:doc] str
-       "\n\n  When used within the dynamic scope of `with-db`, the initial `db`"
-       "\n  argument is automatically provided.")))
+  (let [maybe-doc (first body)
+        doc (if (string? maybe-doc) maybe-doc nil)
+        params (if doc (second body) (first body))
+        params-nodb (vec (rest params))
+        function-body (first (if doc (rest (rest body)) (rest body)))]
+    (assert (not (empty? params)) "Need at least a database parameter")
+    `(do
+       (defn ~name
+         ~(or doc "")
+         (~params-nodb 
+            (let [~(first params) *database*]
+              (assert (thread-bound? #'*database*) "*database* not bound")
+              (~@function-body))))
+       (defn ~(symbol (str name "-with-db"))
+         ~(or doc "")
+         (~params 
+            ;;Convert first argument to url if need be
+            (let [~(first params) (utils/url (url-from-database ~(first params)))]
+              (~@function-body)))))))
+
 
 (defdbop couchdb-info
   "Returns information about a CouchDB instance."
@@ -73,9 +90,9 @@
    the meta information for the new database."
   [db]
   (merge db 
-         (or (database-info db)
-             (and (create-database db)
-                  (database-info db)))))
+         (or (database-info-with-db db)
+             (and (create-database-with-db db)
+                  (database-info-with-db db)))))
 
 (defdbop delete-database
   [db]
@@ -224,7 +241,7 @@
                    (nil? mod) document
                    :else (throw (IllegalArgumentException.
                                   "A map or function is needed to update a document.")))]
-    (put-document db document)))
+    (put-document-with-db db document)))
 
 (defdbop configure-view-server
   "Sets the query server exec string for views written in the specified :language
@@ -280,19 +297,19 @@
   (let [design-doc-id (str "_design/" design-document-name)
         ddoc {fn-type view-server-fns
               :language (name language)}]
-    (if-let [design-doc (get-document db design-doc-id)]
-      (update-document db design-doc merge ddoc)
-      (put-document db (assoc ddoc :_id design-doc-id)))))
+    (if-let [design-doc (get-document-with-db db design-doc-id)]
+      (update-document-with-db db design-doc merge ddoc)
+      (put-document-with-db db (assoc ddoc :_id design-doc-id)))))
 
 (defdbop save-view
   "Create or update a design document containing views used for database queries."
   [db & args]
-  (apply save-design-document db :views args))
+  (apply save-design-document-with-db db :views args))
 
 (defdbop save-filter
   "Create a filter for use with CouchDB change notifications API."
   [db & args]
-  (apply save-design-document db :filters args))
+  (apply save-design-document-with-db db :filters args))
 
 (defn- get-view*
   "Get documents associated with a design document. Also takes an optional map
@@ -411,7 +428,7 @@
   (merge {:heartbeat 30000 :feed "continuous"}
          options
          (when-not (:since options)
-           {:since (:update_seq (database-info db))})
+           {:since (:update_seq (database-info-with-db db))})
          {::db db
           ::state :init
           ::last-update-seq nil}))
@@ -434,7 +451,7 @@
   (let [config-atom (-> *agent* meta ::changes-config)
         config @config-atom]
     (case (::state config)
-      :init (let [changes (apply changes (::db config) (flatten (remove (comp namespace key) config)))
+      :init (let [changes (apply changes-with-db (::db config) (flatten (remove (comp namespace key) config)))
                   http-resp (-> changes meta ::http-resp)]
               ; cannot shut down continuous _changes feeds without aborting this
               (assert (-> http-resp :request :http-req))
@@ -512,12 +529,12 @@
 
 (deftype CouchDB [url meta]
   com.ashafa.clutch.CouchOps
-  (create! [this] (with-result-meta this (get-database url)))
+  (create! [this] (with-result-meta this (get-database-with-db url)))
   (conj! [this doc]
     (let [[id doc] (cond
                      (map? doc)  [(:_id doc) doc]
                      (or (vector? doc) (instance? java.util.Map$Entry)) doc)]
-      (->> (put-document url doc :id id)
+      (->> (put-document-with-db url doc :id id)
         (fail-on-404 url)
         (with-result-meta this))))
   (assoc! [this id document] (conj! this [id document]))
@@ -525,19 +542,19 @@
     (if-let [d (if (document? id)
                    id
                    (this id))]
-      (with-result-meta this (delete-document url d))
+      (with-result-meta this (delete-document-with-db url d))
       (with-result-meta this nil)))
   
   clojure.lang.ILookup
-  (valAt [this k] (get-document url k))
+  (valAt [this k] (get-document-with-db url k))
   (valAt [this k default] (or (.valAt this k) default))
   
   clojure.lang.Counted
-  (count [this] (->> (database-info url) (fail-on-404 url) :doc_count))
+  (count [this] (->> (database-info-with-db url) (fail-on-404 url) :doc_count))
   
   clojure.lang.Seqable
   (seq [this]
-    (->> (all-documents url {:include_docs true})
+    (->> (all-documents-with-db url {:include_docs true})
       (map :doc)
       (map #(clojure.lang.MapEntry. (:_id %) %))))
   

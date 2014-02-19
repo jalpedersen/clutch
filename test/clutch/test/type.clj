@@ -10,9 +10,9 @@
     (try
       ; :update_seq can change anytime, esp. in cloudant
       (is (= (-> db create! meta :result (dissoc :update_seq))
-             (dissoc (get-database name) :update_seq)))
+             (dissoc (get-database-with-db name) :update_seq)))
       (finally
-        (delete-database name)))))
+        (delete-database-with-db name)))))
 
 (defdbtest simple
   (let [db (couch *test-database*)]
@@ -40,11 +40,11 @@
            (dissoc-meta (db :foo))))))
 
 (deftest use-type-as-db-arg
-  (let [name (get-database (test-database-name "use-type-as-db-arg"))
+  (let [name (get-database-with-db (test-database-url (test-database-name "use-type-as-db-arg")))
         db (couch name)]
     (try
       (dotimes [x 100]
-        (put-document db {:a x :_id (str x)}))
-      (bulk-update db (for [x (range 100)] {:_id (str "x" x) :x x}))
-      (is (= 200 (:doc_count (database-info db))))
-      (finally (delete-database name)))))
+        (put-document-with-db db {:a x :_id (str x)}))
+      (bulk-update-with-db db (for [x (range 100)] {:_id (str "x" x) :x x}))
+      (is (= 200 (:doc_count (database-info-with-db db))))
+      (finally (delete-database-with-db name)))))

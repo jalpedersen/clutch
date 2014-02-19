@@ -1,6 +1,6 @@
 (ns clutch.test.changes
   (:use com.ashafa.clutch
-        [test-clutch :only (defdbtest test-docs test-database-name)]
+        [test-clutch :only (defdbtest test-docs test-database-name test-database-url)]
         clojure.test)
   (:refer-clojure :exclude (conj! assoc! dissoc!)))
 
@@ -18,7 +18,7 @@
     wait-condition))
 
 (deftest simple-agent
-  (let [db (get-database (test-database-name "create-type"))]
+  (let [db (get-database-with-db (test-database-url (test-database-name "create-type")))]
     (with-db db
       (try
         (let [a (change-agent)
@@ -27,7 +27,7 @@
           (start-changes a)
           (bulk-update (map #(hash-map :_id (str %)) (range 4)))
           (delete-document (get-document "2"))
-          (update-document (assoc (get-document "1") :assoc :a 5))
+          (update-document (assoc (get-document "1") :a 5))
           (delete-database)
           (wait-for-condition #(-> @updates last :last_seq) "Updates not received")
           (is (= [{:id "0"} {:id "1"} {:id "2"} {:id "3"} {:id "2" :deleted true} {:id "1"}]
