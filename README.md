@@ -7,7 +7,7 @@ Clutch is a [Clojure](http://clojure.org) library for [Apache CouchDB](http://co
 To include Clutch in your project, simply add the following to your `project.clj` dependencies:
 
 ```clojure
-[com.ashafa/clutch "0.4.0-RC1"]
+[com.ashafa/clutch "0.5.0-RC1"]
 ```
 
 Or, if you're using Maven, add this dependency to your `pom.xml`:
@@ -16,7 +16,7 @@ Or, if you're using Maven, add this dependency to your `pom.xml`:
 <dependency>
     <groupId>com.ashafa</groupId>
     <artifactId>clutch</artifactId>
-    <version>0.4.0-RC1</version>
+    <version>0.5.0-RC1</version>
 </dependency>
 ```
 
@@ -24,7 +24,7 @@ The latest stable version of Clutch is `0.3.1`.  But be a mench: use
 the release candidates when you can, and report feedback and issues to
 the [Clutch mailing list](http://groups.google.com/group/clojure-clutch).
 
-Clutch is compatible with Clojure 1.2.0 - 1.5.0, and requires Java 1.5+.
+Clutch is compatible with Clojure 1.5.0+, and requires Java 1.5+.
 
 ## Status
 
@@ -46,19 +46,19 @@ That said, it is very easy to call whatever CouchDB API feature that Clutch does
 First, a basic REPL interaction:
 
 ```clojure
-=> (get-database "clutch_example")  ;; creates database if it's not available yet
+=> (get-database-with-db "clutch_example")  ;; creates database if it's not available yet
 #cemerick.url.URL{:protocol "http", :username nil, :password nil, :host "localhost", :port -1,
 :path "clutch_example", :query nil, :disk_format_version 5, :db_name "clutch_example", :doc_del_count 0,
 :committed_update_seq 0, :disk_size 79, :update_seq 0, :purge_seq 0, :compact_running false,
 :instance_start_time "1323701753566374", :doc_count 0}
 
-=> (bulk-update "clutch_example" [{:test-grade 10 :_id "foo"}
+=> (bulk-update-with-db "clutch_example" [{:test-grade 10 :_id "foo"}
                                   {:test-grade 20}
                                   {:test-grade 30}])
 [{:id "foo", :rev "1-8a15da0db077cd05b45ec93b3a207d09"}
  {:id "0896fbf57128d7f1a1b238a52b0ec372", :rev "1-796ebf042b42fa3585332c3aa4a6f706"}
  {:id "0896fbf57128d7f1a1b238a52b0ecda8", :rev "1-01f063c5aeb1b63992c90c72c7a515ed"}]
-=> (get-document "clutch_example" "foo")
+=> (get-document-with-db "clutch_example" "foo")
 {:_id "foo", :_rev "1-8a15da0db077cd05b45ec93b3a207d09", :test-grade 10}
 ```
 
@@ -78,14 +78,14 @@ credentials separate:
                     :username "username"
                     :password "password"))
 #'test-clutch/db
-=> (put-document db {:a 5 :b [0 6]})
+=> (put-document-with-db db {:a 5 :b [0 6]})
 {:_id "17e55bcc31e33dd30c3313cc2e6e5bb4", :_rev "1-a3517724e42612f9fbd350091a96593c", :a 5, :b [0 6]}
 ```
 
 Of course, you can use a string containing inline credentials as well:
 
 ```clojure
-=> (put-document "https://username:password@XXX.cloudant.com/databasename/" {:a 5 :b 6})
+=> (put-document-with-db "https://username:password@XXX.cloudant.com/databasename/" {:a 5 :b 6})
 {:_id "36b807aacf227f921aa256b06ab094e5", :_rev "1-d4d04a5b59bcd73893a84de2d9595c4c", :a 5, :b 6}
 ```
 
