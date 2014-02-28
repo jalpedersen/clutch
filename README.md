@@ -1,4 +1,4 @@
-# Clutch  [![Travis CI status](https://secure.travis-ci.org/clojure-clutch/clutch.png)](http://travis-ci.org/#!/clojure-clutch/clutch/builds)
+# Clutch  [![Travis CI status](https://secure.travis-ci.org/jalpedersen/clutch.png)](http://travis-ci.org/#!/jalpedersen/clutch/builds)
 
 Clutch is a [Clojure](http://clojure.org) library for [Apache CouchDB](http://couchdb.apache.org/).
 
