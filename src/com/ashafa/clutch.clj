@@ -396,7 +396,7 @@
 
    Hint: use the copy or to-byte-array fns in c.c.io to easily redirect the result."
   [db doc-or-id attachment-name]
-  (let [doc (if (map? doc-or-id) doc-or-id (get-document db doc-or-id))
+  (let [doc (if (map? doc-or-id) doc-or-id (get-document-with-db db doc-or-id))
         attachment-name (if (keyword? attachment-name)
                           (name attachment-name)
                           attachment-name)]
