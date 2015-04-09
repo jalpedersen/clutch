@@ -458,7 +458,7 @@ API documentation for `_changes`](http://wiki.apache.org/couchdb/HTTP_database_A
 
 ## (Partial) Changelog
 
-##### 0.4.0 (in development)
+##### 0.4.0
 
 * **API change**: `watch-changes`, `stop-changes`, and `changes-error`
   have been removed.  See the usage section on changes above.
